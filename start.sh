@@ -9,14 +9,17 @@ fi
 
 mkdir -p /app/data
 
-export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://vendorhub:vendorhub@127.0.0.1:5432/vendorhub}"
+export DATABASE_URL="${DATABASE_URL:-sqlite:////app/data/vendorhub.sqlite3}"
 export VENDOR_HUB_HOST="${VENDOR_HUB_HOST:-0.0.0.0}"
 export VENDOR_HUB_PORT="${VENDOR_HUB_PORT:-8000}"
 
-service postgresql start >/dev/null 2>&1 || pg_ctlcluster 15 main start >/dev/null 2>&1 || true
-
-su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='vendorhub'\" | grep -q 1 || psql -c \"CREATE ROLE vendorhub LOGIN PASSWORD 'vendorhub';\""
-su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='vendorhub'\" | grep -q 1 || psql -c \"CREATE DATABASE vendorhub OWNER vendorhub;\""
+case "$DATABASE_URL" in
+    postgresql*)
+        service postgresql start >/dev/null 2>&1 || pg_ctlcluster 15 main start >/dev/null 2>&1 || true
+        su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='vendorhub'\" | grep -q 1 || psql -c \"CREATE ROLE vendorhub LOGIN PASSWORD 'vendorhub';\""
+        su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='vendorhub'\" | grep -q 1 || psql -c \"CREATE DATABASE vendorhub OWNER vendorhub;\""
+        ;;
+esac
 
 python3 - <<'PY'
 from app.config import build_settings
